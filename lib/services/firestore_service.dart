@@ -1,17 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cuse_food_share_app/models/food_post.dart';
+import 'package:cuse_food_share_app/models/chat_message.dart'; // Import ChatMessage
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Collection reference
+  // Collection reference for posts
   final CollectionReference _postsCollection =
       FirebaseFirestore.instance.collection('foodPosts');
 
-  // Get all available food posts stream
-  Stream<List<FoodPost>> getAvailableFoodPosts() {
+  // Get ALL food posts stream (renamed and filter removed)
+  Stream<List<FoodPost>> getAllFoodPostsStream() {
     return _postsCollection
-        .where('isAvailable', isEqualTo: true) // Only get available posts
+        // Removed: .where('isAvailable', isEqualTo: true)
         .orderBy('timestamp', descending: true) // Show newest first
         .snapshots()
         .map((snapshot) {
@@ -31,8 +32,8 @@ class FirestoreService {
   }
 
 
-  // Add a new food post
-  Future<void> addFoodPost(FoodPost post) {
+  // Add a new food post (now includes coordinates)
+  Future<DocumentReference> addFoodPost(FoodPost post) {
     // Use the FoodPost's toFirestore method
     return _postsCollection.add(post.toFirestore());
   }
@@ -42,7 +43,7 @@ class FirestoreService {
     return _postsCollection.doc(postId).update({'isAvailable': isAvailable});
   }
 
-  // Get a single post (might be needed for details screen if not passed directly)
+  // Get a single post
   Future<FoodPost?> getFoodPost(String postId) async {
       DocumentSnapshot doc = await _postsCollection.doc(postId).get();
       if (doc.exists) {
@@ -51,8 +52,26 @@ class FirestoreService {
       return null;
   }
 
-  // Delete a food post (Optional - maybe only creator can delete)
-  // Future<void> deleteFoodPost(String postId) {
-  //   return _postsCollection.doc(postId).delete();
-  // }
+  // --- Chat Message Methods ---
+
+  // Get chat messages stream for a post
+  Stream<List<ChatMessage>> getChatMessagesStream(String postId) {
+    return _postsCollection
+        .doc(postId)
+        .collection('messages') // Access the subcollection
+        .orderBy('timestamp', descending: true) // Latest messages first
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => ChatMessage.fromFirestore(doc))
+            .toList());
+  }
+
+  // Add a chat message to a post
+  Future<void> addChatMessage(String postId, ChatMessage message) {
+    return _postsCollection
+        .doc(postId)
+        .collection('messages')
+        .add(message.toFirestore());
+  }
+
 }
