@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:cuse_food_share_app/models/app_user.dart'; // Assuming models folder exists
+import 'package:cuse_food_share_app/models/app_user.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
@@ -46,6 +46,7 @@ class AuthService {
       return _userFromFirebaseUser(userCredential.user);
     } catch (e) {
       print("Error signing in with Google: $e");
+      // Consider throwing a more specific exception or returning an error state
       return null;
     }
   }
@@ -60,6 +61,7 @@ class AuthService {
       return _userFromFirebaseUser(user);
     } catch (e) {
       print("Error signing in with email: $e");
+      // Consider specific error codes (e.g., user-not-found, wrong-password)
       return null;
     }
   }
@@ -79,6 +81,7 @@ class AuthService {
       return _userFromFirebaseUser(user);
     } catch (e) {
       print("Error registering with email: $e");
+      // Consider specific error codes (e.g., email-already-in-use)
       return null;
     }
   }
@@ -86,7 +89,10 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut(); // Sign out from Google
+      // Check if currently signed in with Google to avoid unnecessary errors if not
+      if (await _googleSignIn.isSignedIn()) {
+           await _googleSignIn.signOut(); // Sign out from Google
+      }
       await _firebaseAuth.signOut(); // Sign out from Firebase
     } catch (e) {
       print("Error signing out: $e");

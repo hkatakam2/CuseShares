@@ -9,7 +9,6 @@ import 'package:cuse_food_share_app/views/home/widgets/post_list_item.dart';
 import 'package:cuse_food_share_app/views/post/create_post_screen.dart';
 import 'package:cuse_food_share_app/views/profile/profile_screen.dart';
 import 'package:cuse_food_share_app/utils/theme_notifier.dart'; // Import ThemeNotifier
-// import 'package:shimmer/shimmer.dart'; // Optional: for loading shimmer
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -35,23 +34,28 @@ class HomeScreen extends StatelessWidget {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                 CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  child: Icon(isDarkMode ? CupertinoIcons.sun_max : CupertinoIcons.moon_stars, size: 24),
-                  onPressed: () => themeNotifier.toggleTheme(!isDarkMode),
-                ),
-                SizedBox(width: 8), // Adjust spacing
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  child: Icon(CupertinoIcons.square_arrow_right, size: 24),
-                  onPressed: () async => await authViewModel.signOut(),
-                ),
+                 CupertinoButton( // Theme Toggle
+                    padding: EdgeInsets.symmetric(horizontal: 8), // Add padding
+                    child: Icon(isDarkMode ? CupertinoIcons.sun_max_fill : CupertinoIcons.moon_stars_fill, size: 22),
+                    onPressed: () => themeNotifier.toggleTheme(!isDarkMode),
+                  ),
+                 CupertinoButton( // Post Button
+                    padding: EdgeInsets.symmetric(horizontal: 0),
+                    child: Icon(CupertinoIcons.add_circled, size: 26),
+                    onPressed: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => CreatePostScreen())),
+                 ),
+                 CupertinoButton( // Logout
+                    padding: EdgeInsets.only(left: 8), // Add padding
+                    child: Icon(CupertinoIcons.square_arrow_right, size: 24),
+                    onPressed: () async => await authViewModel.signOut(),
+                 ),
               ],
             ),
+             backgroundColor: CupertinoTheme.of(context).barBackgroundColor.withOpacity(0.7), // Make slightly transparent
+             border: null, // Remove bottom border for cleaner look
           )
         : AppBar(
             title: Text('CuseFoodShare - Food Posts'),
-            // backgroundColor: Colors.orange[800], // Set in theme
             actions: [
               IconButton(
                 icon: Icon(isDarkMode ? Icons.wb_sunny_outlined : Icons.nightlight_round),
@@ -75,29 +79,27 @@ class HomeScreen extends StatelessWidget {
     return Platform.isIOS
       ? CupertinoPageScaffold(
           navigationBar: appBar as ObstructingPreferredSizeWidget, // Cast needed
-          child: _buildBody(context, homeViewModel),
+          child: _buildBody(context, homeViewModel), // Pass context here
         )
       : Scaffold(
           appBar: appBar,
-          body: _buildBody(context, homeViewModel),
-          floatingActionButton: FloatingActionButton.extended(
+          body: _buildBody(context, homeViewModel), // Pass context here
+          floatingActionButton: FloatingActionButton.extended( // Only for Material
             onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CreatePostScreen())),
             label: Text('Post Food'),
             icon: Icon(Icons.add_outlined),
-            // backgroundColor: Colors.orange[700], // Set in theme
           ),
         );
   }
 
   // Extracted body builder for reuse
-  Widget _buildBody(BuildContext context, HomeViewModel homeViewModel) {
+  Widget _buildBody(BuildContext context, HomeViewModel homeViewModel) { // Added context parameter
      return StreamBuilder<List<FoodPost>>(
         stream: homeViewModel.allPosts, // Use the updated stream name
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            // Optional: Show shimmer loading effect
-            // return _buildLoadingShimmer();
-            return Center(child: Platform.isIOS ? CupertinoActivityIndicator() : CircularProgressIndicator());
+            // Use platform-specific loading indicator
+            return Center(child: Platform.isIOS ? CupertinoActivityIndicator(radius: 15) : CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             print("Error in stream: ${snapshot.error}");
@@ -116,58 +118,25 @@ class HomeScreen extends StatelessWidget {
           final posts = snapshot.data!;
 
           // Use CupertinoScrollbar on iOS
+          // Add SafeArea to prevent list items going under status bar/nav bar visually
           final Widget listView = ListView.builder(
-            padding: EdgeInsets.all(8.0),
-            itemCount: posts.length,
-            itemBuilder: (context, index) {
-              // Pass the full post object to the list item
-              return PostListItem(post: posts[index]);
-            },
+             // Add padding to avoid content going under navigation bar on iOS when bouncing
+             // Let SafeArea handle top padding
+             padding: Platform.isIOS
+                ? EdgeInsets.only(bottom: 8, left: 8, right: 8)
+                : EdgeInsets.all(8.0),
+             itemCount: posts.length,
+             itemBuilder: (context, index) {
+               return PostListItem(post: posts[index]);
+             },
+           );
+
+          return SafeArea( // Add SafeArea here
+              child: Platform.isIOS
+                  ? CupertinoScrollbar(child: listView)
+                  : listView,
           );
-
-          return Platform.isIOS
-            ? CupertinoScrollbar(child: listView)
-            : listView;
-
-          // TODO: Add RefreshIndicator for pull-to-refresh
-          // return RefreshIndicator(
-          //   onRefresh: () => homeViewModel.refreshPosts(), // Implement refreshPosts in ViewModel
-          //   child: Platform.isIOS ? CupertinoScrollbar(child: listView) : listView,
-          // );
         },
       );
   }
-
-  // Optional: Shimmer loading widget
-  // Widget _buildLoadingShimmer() {
-  //   return Shimmer.fromColors(
-  //     baseColor: Colors.grey[300]!,
-  //     highlightColor: Colors.grey[100]!,
-  //     child: ListView.builder(
-  //       itemCount: 6, // Number of shimmer items
-  //       itemBuilder: (_, __) => Padding(
-  //         padding: const EdgeInsets.all(12.0),
-  //         child: Row(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Container(width: 80.0, height: 80.0, color: Colors.white),
-  //             const Padding(padding: EdgeInsets.symmetric(horizontal: 8.0)),
-  //             Expanded(
-  //               child: Column(
-  //                 crossAxisAlignment: CrossAxisAlignment.start,
-  //                 children: <Widget>[
-  //                   Container(width: double.infinity, height: 12.0, color: Colors.white),
-  //                   const Padding(padding: EdgeInsets.symmetric(vertical: 4.0)),
-  //                   Container(width: double.infinity, height: 10.0, color: Colors.white),
-  //                   const Padding(padding: EdgeInsets.symmetric(vertical: 3.0)),
-  //                   Container(width: 100.0, height: 8.0, color: Colors.white),
-  //                 ],
-  //               ),
-  //             )
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
 }

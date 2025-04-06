@@ -8,18 +8,17 @@ enum PostDetailsStatus { idle, updating, sendingMessage, success, error }
 
 class PostDetailsViewModel with ChangeNotifier {
     final PostRepository _postRepository;
-    FoodPost post; // Hold the specific post
+    FoodPost post;
 
     PostDetailsStatus _status = PostDetailsStatus.idle;
     String? _errorMessage;
 
-    // Chat state
     List<ChatMessage> _messages = [];
-    StreamSubscription? _messageSubscription; // To manage the stream listener
+    StreamSubscription? _messageSubscription;
 
     PostDetailsViewModel({required PostRepository postRepository, required this.post})
         : _postRepository = postRepository {
-            _listenToMessages(); // Start listening to chat messages on init
+            _listenToMessages();
         }
 
     // Getters
@@ -33,7 +32,7 @@ class PostDetailsViewModel with ChangeNotifier {
         _updateStatus(PostDetailsStatus.updating);
         try {
             await _postRepository.markPostAsFinished(post.id);
-            post.isAvailable = false; // Update local state
+            post.isAvailable = false;
             _status = PostDetailsStatus.success;
         } catch (e) {
             _setError("Failed to update status: ${e.toString()}");
@@ -47,7 +46,7 @@ class PostDetailsViewModel with ChangeNotifier {
         _updateStatus(PostDetailsStatus.updating);
         try {
             await _postRepository.markPostAsAvailable(post.id);
-            post.isAvailable = true; // Update local state
+            post.isAvailable = true;
             _status = PostDetailsStatus.success;
         } catch (e) {
             _setError("Failed to update status: ${e.toString()}");
@@ -58,11 +57,11 @@ class PostDetailsViewModel with ChangeNotifier {
 
     // --- Chat Functionality ---
     void _listenToMessages() {
-        _messageSubscription?.cancel(); // Cancel previous subscription if any
+        _messageSubscription?.cancel();
         _messageSubscription = _postRepository.getChatMessagesStream(post.id).listen(
             (newMessages) {
                 _messages = newMessages;
-                notifyListeners(); // Update UI when messages change
+                notifyListeners();
             },
             onError: (error) {
                 print("Error listening to messages: $error");
@@ -73,14 +72,14 @@ class PostDetailsViewModel with ChangeNotifier {
 
     Future<bool> sendChatMessage(String text) async {
         if (text.trim().isEmpty) {
-            _setError("Message cannot be empty.");
+            // Optionally handle this in UI instead of error state
+            // _setError("Message cannot be empty.");
             return false;
         }
         _updateStatus(PostDetailsStatus.sendingMessage);
         try {
             await _postRepository.addChatMessage(postId: post.id, text: text);
-            // Don't set success status here, the stream listener will update the list
-             _updateStatus(PostDetailsStatus.idle); // Reset status after sending attempt
+             _updateStatus(PostDetailsStatus.idle); // Reset status after attempt
              return true;
         } catch (e) {
             _setError("Failed to send message: ${e.toString()}");
@@ -91,7 +90,7 @@ class PostDetailsViewModel with ChangeNotifier {
     // --- Helpers ---
      void _updateStatus(PostDetailsStatus newStatus) {
         _status = newStatus;
-        _errorMessage = null; // Clear error on status change
+        _errorMessage = null;
         notifyListeners();
     }
 
@@ -101,14 +100,12 @@ class PostDetailsViewModel with ChangeNotifier {
         notifyListeners();
     }
 
-     // Reset status after operation
     void resetStatus() {
       if (_status == PostDetailsStatus.success || _status == PostDetailsStatus.error) {
           _updateStatus(PostDetailsStatus.idle);
       }
     }
 
-    // Clean up listener when ViewModel is disposed
     @override
     void dispose() {
         _messageSubscription?.cancel();

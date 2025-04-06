@@ -26,13 +26,17 @@ class LocationService {
     final hasPermission = await _checkAndRequestPermission();
     if (!hasPermission) {
       print("Location permission or service denied.");
+      // Optionally, throw an exception or return a specific error state
       return null;
     }
     try {
-      // May need to adjust accuracy based on needs
-      return await _location.getLocation();
+      // Consider using lower accuracy if high precision isn't strictly needed
+      // return await _location.getLocation();
+       _location.changeSettings(accuracy: LocationAccuracy.high); // Request high accuracy
+       return await _location.getLocation();
     } catch (e) {
       print("Error getting location: $e");
+      // Handle specific exceptions (e.g., platform exceptions) if needed
       return null;
     }
   }

@@ -72,7 +72,7 @@ class PostRepository {
     // 3. Add to Firestore
     DocumentReference docRef = await _firestoreService.addFoodPost(newPost);
 
-    // 4. Trigger Notification (via Cloud Function - see separate section)
+    // 4. Trigger Notification (via Cloud Function)
     // The Cloud Function will listen for this creation event.
     print("Post created with ID: ${docRef.id}");
   }
@@ -102,6 +102,7 @@ class PostRepository {
       throw Exception("User not logged in to chat");
     }
     if (text.trim().isEmpty) {
+        // Optionally, handle this in ViewModel instead of throwing
         throw Exception("Message cannot be empty");
     }
 

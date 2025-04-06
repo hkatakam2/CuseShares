@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -19,7 +18,7 @@ class MapPickerScreen extends StatefulWidget {
 class _MapPickerScreenState extends State<MapPickerScreen> {
   GoogleMapController? _mapController;
   LatLng? _pickedLocation;
-  Marker? _marker;
+  // Marker? _marker; // Using center pin instead of draggable marker
   String _pickedAddress = "Fetching address...";
   bool _isLoading = false;
   bool _isGettingUserLocation = false;
@@ -30,79 +29,94 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
   void initState() {
     super.initState();
     _pickedLocation = widget.initialPosition; // Start with initial position
-    _updateMarkerAndAddress(widget.initialPosition);
+    _updateAddress(widget.initialPosition); // Fetch initial address
   }
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
+     // Apply dark mode styling if needed when map is created
+     _setMapStyle();
   }
 
-  void _onCameraMove(CameraPosition position) {
-    // Update picked location as camera moves, but maybe only update marker on idle?
-    // _pickedLocation = position.target;
-  }
-
-  void _onCameraIdle() async {
-    // Update marker and address when camera stops moving
-    if (_mapController != null) {
-        // This gets the center of the screen
-        LatLng center = await _getCenter();
-         _pickedLocation = center;
-        _updateMarkerAndAddress(center);
+  // Apply map style based on theme
+  void _setMapStyle() async {
+    if (_mapController == null || !mounted) return;
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    if (isDarkMode) {
+      // TODO: Load dark map style JSON from assets if you have one
+      // String darkStyle = await DefaultAssetBundle.of(context).loadString('assets/map_styles/dark_mode.json');
+      // _mapController!.setMapStyle(darkStyle);
+       _mapController!.setMapStyle(null); // Reset to default for now
+    } else {
+      _mapController!.setMapStyle(null); // Reset to default light style
     }
   }
 
-  // Helper to get map center reliably
+
+  void _onCameraMove(CameraPosition position) {
+    // Could potentially show a "loading" state on the address while moving
+     if (!mounted) return;
+     setState(() {
+        _isLoading = true; // Show loading indicator while moving
+        _pickedAddress = "Moving map...";
+     });
+  }
+
+  void _onCameraIdle() async {
+    if (_mapController != null && mounted) {
+        LatLng center = await _getCenter();
+         _pickedLocation = center;
+        _updateAddress(center); // Fetch address for the final center position
+    }
+  }
+
   Future<LatLng> _getCenter() async {
-    if (_mapController == null) return widget.initialPosition; // Fallback
-    LatLngBounds visibleRegion = await _mapController!.getVisibleRegion();
-    LatLng center = LatLng(
-      (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
-      (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2,
-    );
-    return center;
+    if (_mapController == null) return widget.initialPosition;
+    // Use screen coordinates to calculate center to be more robust
+    if (!mounted) return widget.initialPosition; // Check mounted before accessing context
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height; // Be careful with context access
+    ScreenCoordinate centerPoint = ScreenCoordinate(x: (screenWidth / 2).round(), y: (screenHeight / 2).round());
+    LatLng centerLatLng = await _mapController!.getLatLng(centerPoint);
+    return centerLatLng;
+    // Fallback using visibleRegion (less accurate if map tilted/rotated)
+    // LatLngBounds visibleRegion = await _mapController!.getVisibleRegion();
+    // LatLng center = LatLng(
+    //   (visibleRegion.northeast.latitude + visibleRegion.southwest.latitude) / 2,
+    //   (visibleRegion.northeast.longitude + visibleRegion.southwest.longitude) / 2,
+    // );
+    // return center;
   }
 
 
-  Future<void> _updateMarkerAndAddress(LatLng position) async {
-    setState(() {
-      _isLoading = true;
-      _pickedLocation = position;
-      _marker = Marker(
-        markerId: MarkerId('pickedLocation'),
-        position: position,
-        infoWindow: InfoWindow(title: 'Selected Location'),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-      );
-    });
+  Future<void> _updateAddress(LatLng position) async {
+    if (!mounted) return;
+    setState(() { _isLoading = true; }); // Ensure loading state is set
 
     try {
       List<geocoding.Placemark> placemarks = await geocoding.placemarkFromCoordinates(
         position.latitude,
         position.longitude,
+        // Optionally set localeIdentifier: 'en_US'
       );
-      if (placemarks.isNotEmpty) {
+      if (mounted && placemarks.isNotEmpty) {
         geocoding.Placemark place = placemarks[0];
-        // Construct a readable address
         _pickedAddress = "${place.street ?? ''}${place.street != null && place.locality != null ? ', ' : ''}${place.locality ?? ''}${place.locality != null && place.administrativeArea != null ? ', ' : ''}${place.administrativeArea ?? ''} ${place.postalCode ?? ''}".trim();
          if (_pickedAddress.startsWith(',')) _pickedAddress = _pickedAddress.substring(1).trim();
-         if (_pickedAddress.isEmpty) _pickedAddress = "Address not found";
-
-      } else {
+         if (_pickedAddress.isEmpty) _pickedAddress = "Address not found at this location";
+      } else if (mounted) {
         _pickedAddress = "Address not found";
       }
     } catch (e) {
       print("Error fetching address: $e");
-      _pickedAddress = "Could not fetch address";
+       if (mounted) _pickedAddress = "Could not fetch address";
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+       if (mounted) setState(() { _isLoading = false; });
     }
   }
 
-   // --- Get User's Current Location ---
   Future<void> _goToUserLocation() async {
+      if (!mounted) return;
       setState(() { _isGettingUserLocation = true; });
       try {
           var serviceEnabled = await _locationService.serviceEnabled();
@@ -118,18 +132,16 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           }
 
           final LocationData currentLocation = await _locationService.getLocation();
-          if (currentLocation.latitude != null && currentLocation.longitude != null) {
+          if (mounted && currentLocation.latitude != null && currentLocation.longitude != null) {
               final userLatLng = LatLng(currentLocation.latitude!, currentLocation.longitude!);
               _mapController?.animateCamera(CameraUpdate.newLatLngZoom(userLatLng, 15.0));
-              // Update marker and address after animation (optional, _onCameraIdle will handle it)
-              // _updateMarkerAndAddress(userLatLng);
+              // Address will update via _onCameraIdle after animation
           }
       } catch (e) {
           print("Error getting user location: $e");
-          // Show error to user
-           _showPlatformDialog("Location Error", "Could not get current location: ${e.toString()}");
+           if (mounted) _showPlatformDialog("Location Error", "Could not get current location: ${e.toString()}");
       } finally {
-           setState(() { _isGettingUserLocation = false; });
+           if (mounted) setState(() { _isGettingUserLocation = false; });
       }
   }
 
@@ -145,25 +157,30 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+     // Update map style if theme changes
+     _setMapStyle();
+
     final Widget mapWidget = GoogleMap(
       onMapCreated: _onMapCreated,
       initialCameraPosition: CameraPosition(
         target: widget.initialPosition,
         zoom: 15.0,
       ),
-      markers: _marker != null ? {_marker!} : {},
+      // markers: _marker != null ? {_marker!} : {}, // Don't show marker, use center pin
       onCameraMove: _onCameraMove,
       onCameraIdle: _onCameraIdle,
-      myLocationEnabled: true, // Show blue dot for user location
-      myLocationButtonEnabled: false, // Disable default button, we use our own
-      zoomControlsEnabled: true, // Show zoom controls
-       mapType: MapType.normal,
+      myLocationEnabled: true,
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: Platform.isAndroid, // Only show zoom controls on Android
+      compassEnabled: false, // Hide compass
+      mapToolbarEnabled: false, // Hide toolbar
+      mapType: MapType.normal,
     );
 
     final Widget body = Stack(
       children: [
         mapWidget,
-        // Center Marker Pin (doesn't move with map) - visual guide
+        // Center Marker Pin
          Center(
            child: Padding(
              padding: const EdgeInsets.only(bottom: 40.0), // Adjust so pin bottom is at center
@@ -172,11 +189,12 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
          ),
         // Address Display Card at Bottom
         Positioned(
-          bottom: 80, // Position above the confirm button
+          bottom: 80,
           left: 10,
           right: 10,
           child: Card(
              elevation: 4.0,
+             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(12.0),
               child: Row(
@@ -197,18 +215,30 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         ),
          // My Location Button
          Positioned(
-            top: Platform.isIOS ? 100 : 80, // Adjust based on AppBar/StatusBar
+            top: MediaQuery.of(context).padding.top + (Platform.isIOS ? 60 : 15), // Adjust based on AppBar/StatusBar
             right: 15,
-            child: FloatingActionButton(
-              mini: true,
-              onPressed: _isGettingUserLocation ? null : _goToUserLocation,
-              child: _isGettingUserLocation
-                  ? (Platform.isIOS ? CupertinoActivityIndicator() : SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).primaryColor)))
-                  : Icon(Platform.isIOS ? CupertinoIcons.location_fill : Icons.my_location),
-              heroTag: 'myLocationBtn', // Avoid Hero tag conflicts if multiple FABs
-              backgroundColor: Theme.of(context).cardColor,
-              foregroundColor: Theme.of(context).primaryColor,
-            ),
+            child: Platform.isIOS
+              ? CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: CircleAvatar( // Wrap in CircleAvatar for background
+                     radius: 22, // Slightly larger tap target
+                     backgroundColor: CupertinoTheme.of(context).barBackgroundColor.withOpacity(0.8),
+                     child: _isGettingUserLocation
+                       ? CupertinoActivityIndicator()
+                       : Icon(CupertinoIcons.location_fill, color: CupertinoTheme.of(context).primaryColor),
+                  ),
+                  onPressed: _isGettingUserLocation ? null : _goToUserLocation,
+                )
+              : FloatingActionButton(
+                  mini: true,
+                  onPressed: _isGettingUserLocation ? null : _goToUserLocation,
+                  child: _isGettingUserLocation
+                      ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(Icons.my_location),
+                  heroTag: 'myLocationBtn',
+                  backgroundColor: Theme.of(context).cardColor,
+                  foregroundColor: Theme.of(context).primaryColor,
+                ),
           ),
       ],
     );
@@ -216,9 +246,10 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
      final PreferredSizeWidget appBar = Platform.isIOS
         ? CupertinoNavigationBar(
             middle: Text('Pick Location'),
+            previousPageTitle: 'Create Post', // Provide back button context
             trailing: CupertinoButton(
                 padding: EdgeInsets.zero,
-                child: Text('Done'),
+                child: Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
                 onPressed: _isLoading ? null : _confirmSelection,
             ),
           )
@@ -233,21 +264,27 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
             ],
           );
 
-      // Confirm Button (Floating Action Button style)
+      // Confirm Button
       final Widget confirmButton = Padding(
-          padding: const EdgeInsets.only(bottom: 20.0, left: 20, right: 20), // Add padding
-          child: SizedBox( // Ensure button takes full width
+          padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom + 15, // Adjust for safe area + padding
+              left: 20,
+              right: 20,
+              top: 15
+          ),
+          child: SizedBox(
             width: double.infinity,
             child: Platform.isIOS
               ? CupertinoButton.filled(
-                  child: Text('Confirm Location'),
+                  child: Text('Confirm This Location'),
                   onPressed: _isLoading ? null : _confirmSelection,
                 )
-              : FloatingActionButton.extended(
+              : ElevatedButton( // Use ElevatedButton for Material consistency
+                  child: Text('Confirm This Location'),
                   onPressed: _isLoading ? null : _confirmSelection,
-                  label: Text('Confirm Location'),
-                  icon: Icon(Icons.check),
-                  // heroTag: 'confirmLocationBtn', // Avoid Hero tag conflicts
+                  style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: 15),
+                  ),
                 ),
           ),
         );
@@ -256,18 +293,24 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
     return Platform.isIOS
       ? CupertinoPageScaffold(
           navigationBar: appBar as ObstructingPreferredSizeWidget,
-          child: Stack(children: [body, Positioned(bottom: 0, left: 0, right: 0, child: confirmButton)]), // Place button at bottom
+          child: Stack(children: [body, Positioned(bottom: 0, left: 0, right: 0, child: Material( // Material needed for elevation/shadow on button background
+             color: CupertinoTheme.of(context).scaffoldBackgroundColor.withOpacity(0.9), // Slightly transparent background
+             child: confirmButton))]),
         )
       : Scaffold(
           appBar: appBar,
           body: body,
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat, // Position FAB
-          floatingActionButton: confirmButton,
+          // Use bottomNavigationBar for Material button placement
+          bottomNavigationBar: Material( // Material needed for elevation/shadow
+             elevation: 8.0,
+             child: confirmButton
+          ),
         );
   }
 
    // --- Helper for Platform Dialog ---
   void _showPlatformDialog(String title, String content) {
+      if (!mounted) return; // Check if mounted before showing dialog
       if (Platform.isIOS) {
           showCupertinoDialog(
               context: context,

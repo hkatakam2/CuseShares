@@ -3,8 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // For GeoPoint
 import 'package:cuse_food_share_app/repositories/post_repository.dart';
 import 'package:image_picker/image_picker.dart';
-// Import location related things if needed for state management here
-// For simplicity, location picking logic might live directly in the View for now
 
 enum CreatePostStatus { idle, pickingImage, pickingLocation, uploading, success, error }
 
@@ -14,9 +12,8 @@ class CreatePostViewModel with ChangeNotifier {
   CreatePostViewModel({required PostRepository postRepository}) : _postRepository = postRepository;
 
   File? _selectedImage;
-  // Store selected location details if picked from map
   GeoPoint? _selectedCoordinates;
-  String? _selectedLocationText; // Can be from map reverse geocode or manual input
+  String? _selectedLocationText;
 
   CreatePostStatus _status = CreatePostStatus.idle;
   String? _errorMessage;
@@ -24,7 +21,7 @@ class CreatePostViewModel with ChangeNotifier {
   // Getters
   File? get selectedImage => _selectedImage;
   GeoPoint? get selectedCoordinates => _selectedCoordinates;
-  String? get selectedLocationText => _selectedLocationText; // Display this in UI
+  String? get selectedLocationText => _selectedLocationText;
   CreatePostStatus get status => _status;
   String? get errorMessage => _errorMessage;
 
@@ -49,11 +46,11 @@ class CreatePostViewModel with ChangeNotifier {
     }
   }
 
-  // --- Location Picking --- (State management part)
+  // --- Location Picking ---
   void setLocation(GeoPoint coordinates, String address) {
       _selectedCoordinates = coordinates;
       _selectedLocationText = address;
-      notifyListeners(); // Update UI to show selected location
+      notifyListeners();
   }
 
    void clearLocation() {
@@ -66,7 +63,7 @@ class CreatePostViewModel with ChangeNotifier {
   Future<bool> submitPost({
     required String foodName,
     required String description,
-    required String locationText, // Use the text provided by user OR from map picker state
+    required String locationText,
   }) async {
     if (_selectedImage == null) {
       _setError("Please select an image.");
@@ -76,19 +73,18 @@ class CreatePostViewModel with ChangeNotifier {
        _setError("Please fill in all fields.");
        return false;
     }
-    // Note: _selectedCoordinates might be null if user entered location manually
 
     _updateStatus(CreatePostStatus.uploading);
     try {
       await _postRepository.createFoodPost(
         foodName: foodName,
         description: description,
-        locationText: locationText, // Pass the final text
-        coordinates: _selectedCoordinates, // Pass the coordinates (can be null)
+        locationText: locationText,
+        coordinates: _selectedCoordinates, // Pass coordinates (can be null)
         imageFile: _selectedImage!,
       );
       _status = CreatePostStatus.success;
-      _clearForm(); // Clear fields after successful upload
+      _clearForm();
       notifyListeners();
       return true;
     } catch (e) {
@@ -100,7 +96,7 @@ class CreatePostViewModel with ChangeNotifier {
   // --- Helpers ---
   void _updateStatus(CreatePostStatus newStatus) {
     _status = newStatus;
-    _errorMessage = null; // Clear error on status change
+    _errorMessage = null;
     notifyListeners();
   }
 
@@ -114,10 +110,8 @@ class CreatePostViewModel with ChangeNotifier {
       _selectedImage = null;
       _selectedCoordinates = null;
       _selectedLocationText = null;
-      // Don't clear controllers here, let the view handle that on success maybe
   }
 
-  // Reset status (e.g., after success or error message is shown)
   void resetStatus() {
       if (_status == CreatePostStatus.success || _status == CreatePostStatus.error) {
           _updateStatus(CreatePostStatus.idle);
