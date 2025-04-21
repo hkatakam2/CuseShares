@@ -1,26 +1,10 @@
-this code is working; 
 
-I want to see all the posts regardless of isAvalable on the home screen; but I want to see in a croner a green dot or a red dot in the  inside the list of post_list_item widget to indicate the isAvailable status.
+app icon
 
-when any user creates a new post, all others must receive a notification on their devices about this new post (similar to notifications from other apps in their phone). give me code to do this. 
 
-Also in the presentation layer, write code to use platform specific widgets for iOS and android. Also make sure the app looks good in both portrait and landscape orientations.
+i created the post and I am getting the notification, its' everyone else that needs to get it.
 
-Also provide a button anywhere on the home screen for dark mode theme. and add code to incoporate this feature.
-
-I want to provide a simple chat feature, from the post detail page, where any user can post further details about the item and these chats are recorded in chronological order, latest at the top.
-
-the main focus of this project is UI/UX, modify the code to include sophisticated UI/UX and propose more ideas to make this better and give me code.
-
-I also want to add google maps APi integration to the location field and also provide a button that shows directions to the food location
-
-on the login page, when I press sign in with google, nothing is happening, the app is just crashing, how to fix this.
-
-give me a full detailed code for all the implementations.  
-
-sophisticated UI: navigations, different views,
-
-modify the whole code;
+colud functions are working in .js version itself. but 
 
 long press/ slide left to delete?
 persistence
@@ -36,6 +20,9 @@ todo:
 upload some food pictures
 what are the device native features we are using? taking a photo, gps location;
 
+cusefoodshare:
+what are the advanced features?
+theme, search, refresh, maps
 
 may be i prefer BLoC architecure over the MVVM
 fix google sign in
@@ -59,3 +46,10 @@ fix google sign in
 
 
 add sounds/ animations, badges
+
+the content is not visible properly in iOS
+when i click the map; app is crashing (catch errors, the app cannot crash)
+google sign in still not working
+
+
+
