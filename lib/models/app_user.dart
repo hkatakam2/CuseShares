@@ -11,4 +11,24 @@ class AppUser {
     this.displayName,
     this.photoURL,
   });
+
+  // Create user from Firebase User data
+  factory AppUser.fromMap(Map<String, dynamic> data) {
+    return AppUser(
+      uid: data['uid'] ?? '',
+      email: data['email'] ?? '',
+      displayName: data['name'] ?? '',
+      photoURL: data['photoURL'] ?? '',
+    );
+  }
+
+  // Convert user to Map for Firestore
+  Map<String, dynamic> toMap() {
+    return {
+      'uid': uid,
+      'email': email,
+      'name': displayName,
+      'photoURL': photoURL,
+    };
+  }
 }

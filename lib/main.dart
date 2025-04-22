@@ -1,4 +1,3 @@
-
 import 'dart:io'; // For Platform check
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart'; // Import App Check
