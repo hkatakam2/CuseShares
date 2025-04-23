@@ -41,6 +41,14 @@ exports.sendNewFoodNotification = onDocumentCreated({
         color: '#FFA500',
       }
     },
+    apns: {
+      headers: {'apns-priority': '10'},
+      payload: {
+        aps: {
+          sound: 'default',
+        }
+      }
+    }
   };
 
   try {

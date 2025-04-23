@@ -1,11 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cuse_food_share_app/models/app_user.dart';
 
 class AuthService {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
-
+  
   // Create user object based on FirebaseUser
   AppUser? _userFromFirebaseUser(User? user) {
     return user != null
@@ -27,29 +25,6 @@ class AuthService {
     return _userFromFirebaseUser(_firebaseAuth.currentUser);
   }
 
-  // Sign in with Google
-  Future<AppUser?> signInWithGoogle() async {
-    try {
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        // User cancelled the sign-in
-        return null;
-      }
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final UserCredential userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-      return _userFromFirebaseUser(userCredential.user);
-    } catch (e) {
-      print("Error signing in with Google: $e");
-      // Consider throwing a more specific exception or returning an error state
-      return null;
-    }
-  }
 
   // Sign in with Email & Password
   Future<AppUser?> signInWithEmailAndPassword(
@@ -89,10 +64,6 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      // Check if currently signed in with Google to avoid unnecessary errors if not
-      if (await _googleSignIn.isSignedIn()) {
-           await _googleSignIn.signOut(); // Sign out from Google
-      }
       await _firebaseAuth.signOut(); // Sign out from Firebase
     } catch (e) {
       print("Error signing out: $e");

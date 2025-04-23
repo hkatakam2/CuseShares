@@ -120,51 +120,78 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Use a single provider instance for this screen
     return ChangeNotifierProvider<CreatePostViewModel>(
       create: (context) => CreatePostViewModel(
           postRepository: Provider.of<PostRepository>(context, listen: false)),
-      child: Consumer<CreatePostViewModel>(
-        builder: (context, viewModel, child) {
-          // Show success/error messages (Platform Aware)
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            // Check if mounted before showing snackbar or navigating
-            if (!mounted) return;
-            if (viewModel.status == CreatePostStatus.success) {
-               _showPlatformSnackbar(context, 'Post created successfully!', isError: false);
-               Navigator.of(context).pop(); // Go back
-               viewModel.resetStatus();
-            } else if (viewModel.status == CreatePostStatus.error && viewModel.errorMessage != null) {
-                _showPlatformSnackbar(context, 'Error: ${viewModel.errorMessage}', isError: true);
-                viewModel.resetStatus();
-            }
-          });
+      child: Platform.isIOS
+          ? _buildIOSLayout(context)
+          : _buildAndroidLayout(context),
+    );
+  }
 
-          // Platform-specific Scaffold/PageScaffold
-          final Widget body = _buildFormBody(context, viewModel);
-          final PreferredSizeWidget appBar = Platform.isIOS
-              ? CupertinoNavigationBar(
-                  middle: Text('Create Post'),
-                  leading: CupertinoNavigationBarBackButton(
-                      previousPageTitle: 'Home', // Or appropriate back title
-                      onPressed: () => Navigator.of(context).pop(),
+  Widget _buildIOSLayout(BuildContext context) {
+    return Consumer<CreatePostViewModel>(
+      builder: (context, viewModel, child) {
+        // Handle success/error states
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (viewModel.status == CreatePostStatus.success) {
+            viewModel.resetStatus();
+            // Pop until we reach the root navigator (home screen)
+            Navigator.of(context, rootNavigator: true).pop();
+          } else if (viewModel.status == CreatePostStatus.error && viewModel.errorMessage != null) {
+            // Show error using CupertinoDialog instead of Snackbar
+            showCupertinoDialog(
+              context: context,
+              builder: (context) => CupertinoAlertDialog(
+                title: Text('Error'),
+                content: Text(viewModel.errorMessage!),
+                actions: [
+                  CupertinoDialogAction(
+                    child: Text('OK'),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                )
-              : AppBar(
-                  title: Text('Create New Food Post'),
-                );
+                ],
+              ),
+            );
+            viewModel.resetStatus();
+          }
+        });
 
-          return Platform.isIOS
-            ? CupertinoPageScaffold(
-                navigationBar: appBar as ObstructingPreferredSizeWidget,
-                child: SafeArea(child: body), // SafeArea for content below nav bar
-              )
-            : Scaffold(
-                appBar: appBar,
-                body: body,
-              );
-        },
-      ),
+        return CupertinoPageScaffold(
+          navigationBar: CupertinoNavigationBar(
+            middle: Text('Create Post'),
+            leading: CupertinoNavigationBarBackButton(
+              previousPageTitle: 'Home',
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          child: SafeArea(child: _buildFormBody(context, viewModel)),
+        );
+      },
+    );
+  }
+
+  Widget _buildAndroidLayout(BuildContext context) {
+    return Consumer<CreatePostViewModel>(
+      builder: (context, viewModel, child) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          if (viewModel.status == CreatePostStatus.success) {
+            _showPlatformSnackbar(context, 'Post created successfully!', isError: false);
+            viewModel.resetStatus();
+            Navigator.of(context, rootNavigator: true).pop();
+          } else if (viewModel.status == CreatePostStatus.error && viewModel.errorMessage != null) {
+            _showPlatformSnackbar(context, 'Error: ${viewModel.errorMessage}', isError: true);
+            viewModel.resetStatus();
+          }
+        });
+
+        return Scaffold(
+          appBar: AppBar(title: Text('Create New Food Post')),
+          body: _buildFormBody(context, viewModel),
+        );
+      },
     );
   }
 
@@ -398,12 +425,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
    // --- Helper for Platform Snackbar ---
   void _showPlatformSnackbar(BuildContext context, String message, {bool isError = false}) {
-       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(message),
-              backgroundColor: isError ? Colors.redAccent : Colors.green,
-              behavior: SnackBarBehavior.floating,
-          )
-       );
+    if (Platform.isAndroid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: isError ? Colors.redAccent : Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

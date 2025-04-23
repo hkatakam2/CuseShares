@@ -11,4 +11,3 @@ class HomeViewModel with ChangeNotifier {
   Stream<List<FoodPost>> get allPosts => _postRepository.getAllFoodPostsStream();
 
 }
-

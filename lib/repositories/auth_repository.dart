@@ -14,8 +14,6 @@ class AuthRepository {
   AppUser? get currentUser => _authService.currentUser;
 
   // Expose sign-in methods
-  Future<AppUser?> signInWithGoogle() => _authService.signInWithGoogle();
-
   Future<AppUser?> signInWithEmailAndPassword(String email, String password) =>
       _authService.signInWithEmailAndPassword(email, password);
 

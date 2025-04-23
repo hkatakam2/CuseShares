@@ -136,30 +136,12 @@ class _LoginScreenState extends State<LoginScreen> {
             // style: ElevatedButton.styleFrom(...), // From theme
           );
 
+      // Google Button REMOVED
+      /*
       final Widget googleButton = Platform.isIOS
-        ? CupertinoButton(
-            color: Colors.white, // Match Material style
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/images/google_logo.png', height: 20.0),
-                SizedBox(width: 10),
-                Text('Sign in with Google', style: TextStyle(color: Colors.black87)),
-              ],
-            ),
-            onPressed: isAuthenticating ? null : () => authViewModel.signInWithGoogle(),
-          )
-        : ElevatedButton.icon(
-            icon: Image.asset('assets/images/google_logo.png', height: 24.0),
-            label: Text('Sign in with Google'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.grey[700],
-              // padding: EdgeInsets.symmetric(vertical: 12), // From theme
-              // shape: RoundedRectangleBorder(...) // From theme
-            ),
-            onPressed: isAuthenticating ? null : () => authViewModel.signInWithGoogle(),
-          );
+        ? CupertinoButton(...)
+        : ElevatedButton.icon(...);
+      */
 
       final Widget toggleButton = Platform.isIOS
         ? CupertinoButton(
@@ -188,7 +170,6 @@ class _LoginScreenState extends State<LoginScreen> {
     // --- Build Method ---
     final Widget formContent = Form(
         key: _formKey,
-        // Use CupertinoFormSection for iOS grouping if desired, or simple Column
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -209,8 +190,9 @@ class _LoginScreenState extends State<LoginScreen> {
             errorMessage, // Show error message here
             submitButton,
             SizedBox(height: 12),
-            googleButton,
-            SizedBox(height: 20),
+            // Google Button REMOVED
+            // googleButton,
+            // SizedBox(height: 20),
             toggleButton,
           ],
         ),
@@ -251,15 +233,14 @@ class _LoginScreenState extends State<LoginScreen> {
   // Helper function for form submission logic
   void _submitForm() async {
       final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
-      // Basic validation check even for Cupertino
       bool isValid = true;
-      if (_emailController.text.isEmpty || !_emailController.text.contains('@')) isValid = false;
-      if (_passwordController.text.isEmpty || _passwordController.text.length < 6) isValid = false;
-      if (!_isLogin && _displayNameController.text.isEmpty) isValid = false;
-
-      // Use Form validation for Material
       if (Platform.isAndroid) {
           isValid = _formKey.currentState?.validate() ?? false; // Check if form state exists
+      } else {
+         // Basic manual checks for iOS
+         if (_emailController.text.isEmpty || !_emailController.text.contains('@')) isValid = false;
+         if (_passwordController.text.isEmpty || _passwordController.text.length < 6) isValid = false;
+         if (!_isLogin && _displayNameController.text.isEmpty) isValid = false;
       }
 
       if (isValid) {
@@ -291,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Helper class for CupertinoTextFormFieldRow (if not using flutter_platform_widgets)
+// Helper class for CupertinoTextFormFieldRow (keep as previously provided)
 class CupertinoTextFormFieldRow extends StatefulWidget {
   final TextEditingController? controller;
   final String? placeholder;
@@ -299,6 +280,9 @@ class CupertinoTextFormFieldRow extends StatefulWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final FormFieldValidator<String>? validator;
+  final int maxLines;
+  final void Function(String)? onChanged;
+
 
   const CupertinoTextFormFieldRow({
     Key? key,
@@ -308,6 +292,8 @@ class CupertinoTextFormFieldRow extends StatefulWidget {
     this.keyboardType,
     this.obscureText = false,
     this.validator,
+    this.maxLines = 1,
+    this.onChanged,
   }) : super(key: key);
 
   @override
@@ -342,11 +328,13 @@ class _CupertinoTextFormFieldRowState extends State<CupertinoTextFormFieldRow> {
           prefix: widget.prefix,
           keyboardType: widget.keyboardType,
           obscureText: widget.obscureText,
+          maxLines: widget.maxLines,
           padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
           decoration: BoxDecoration(
             border: Border.all(color: errorText != null ? CupertinoColors.systemRed : CupertinoColors.systemGrey4),
             borderRadius: BorderRadius.circular(8.0),
           ),
+          onChanged: widget.onChanged, // Pass onChanged
           // onChanged: (_) => validate(), // Optionally validate on change
         ),
         if (errorText != null)
