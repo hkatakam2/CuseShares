@@ -84,7 +84,7 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = DateFormat('EEEE, MMM d, archetype \'at\' h:mm a').format(widget.post.timestamp.toDate()); // More detailed date
+    final formattedDate = DateFormat('MMM d, h:mm a').format(widget.post.timestamp.toDate()); // More detailed date
     final currentUser = Provider.of<AuthViewModel>(context, listen: false).user;
     final bool isPostOwner = currentUser?.uid == widget.post.userId;
 
@@ -237,14 +237,17 @@ class _PostDetailsScreenState extends State<PostDetailsScreen> {
           return Platform.isIOS
             ? CupertinoPageScaffold(
                 // navigationBar handled by SliverAppBar
-                child: GestureDetector( // Dismiss keyboard on tap outside input
-                   onTap: () => FocusScope.of(context).unfocus(),
-                   child: Stack(
-                     children: [
-                        bodyContent,
-                        Positioned(bottom: 0, left: 0, right: 0, child: _buildChatInput(context, viewModel))
-                     ]
-                   ),
+                child: Material( // Add Material widget wrapper
+                  color: Colors.transparent, // Keep background transparent
+                  child: GestureDetector( // Dismiss keyboard on tap outside input
+                     onTap: () => FocusScope.of(context).unfocus(),
+                     child: Stack(
+                       children: [
+                          bodyContent,
+                          Positioned(bottom: 0, left: 0, right: 0, child: _buildChatInput(context, viewModel))
+                       ]
+                     ),
+                  ),
                 ),
               )
             : Scaffold(

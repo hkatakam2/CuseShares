@@ -39,31 +39,6 @@ class AuthViewModel with ChangeNotifier {
   AppUser? get user => _user;
   String? get errorMessage => _errorMessage;
 
-  // Sign In with Google
-  Future<void> signInWithGoogle() async {
-    _status = AuthStatus.authenticating;
-    _errorMessage = null;
-    notifyListeners();
-    try {
-      AppUser? loggedInUser = await _authRepository.signInWithGoogle();
-      if (loggedInUser == null && _status != AuthStatus.authenticated) {
-         // User cancelled or failed, and stream hasn't updated yet
-         _status = AuthStatus.unauthenticated;
-         _errorMessage = "Sign in cancelled or failed.";
-      }
-      // Status will be updated by the stream listener upon success/failure
-    } catch (e) {
-      _status = AuthStatus.error;
-      _errorMessage = e.toString();
-      _user = null; // Ensure user is null on error
-    } finally {
-        // Only notify if status wasn't updated by the stream listener
-        if (_status != AuthStatus.authenticated && _status != AuthStatus.unauthenticated) {
-            notifyListeners();
-        }
-    }
-  }
-
   // Sign In with Email
   Future<bool> signInWithEmail(String email, String password) async {
     _status = AuthStatus.authenticating;

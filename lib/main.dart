@@ -1,10 +1,10 @@
-
 import 'dart:io'; // For Platform check
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart'; // Import App Check
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; // Import Cupertino
 import 'package:provider/provider.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'; // Add this import
 
 import 'firebase_options.dart';
 import 'models/app_user.dart';
@@ -207,6 +207,18 @@ class CuseApp extends StatelessWidget {
        // Add other dark theme properties
     );
 
+    // Common localization delegates
+    final localizationsDelegates = [
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ];
+
+    final supportedLocales = [
+      const Locale('en', ''), // English
+      // Add other locales as needed
+    ];
+
     // Choose Material or Cupertino App based on Platform
     if (Platform.isIOS) {
       // Apply Material theme concepts to Cupertino theme data
@@ -218,6 +230,8 @@ class CuseApp extends StatelessWidget {
         title: 'CuseFoodShare',
         debugShowCheckedModeBanner: false,
         theme: cupertinoTheme, // Apply the generated Cupertino theme
+        localizationsDelegates: localizationsDelegates, // Add localization
+        supportedLocales: supportedLocales,         // Add supported locales
         home: AuthWrapper(),
       );
     } else {
@@ -228,6 +242,8 @@ class CuseApp extends StatelessWidget {
         darkTheme: darkTheme,
         themeMode: themeNotifier.themeMode, // Control light/dark mode
         debugShowCheckedModeBanner: false,
+        localizationsDelegates: localizationsDelegates, // Add localization
+        supportedLocales: supportedLocales,         // Add supported locales
         home: AuthWrapper(),
       );
     }
